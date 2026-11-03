@@ -30,7 +30,7 @@
       <h2 id="panel-title">{result.name}</h2>
       <p class="meta">{CHAMBERS[chamber].label}{result.seats ? ` · ${result.seats.total} ${result.seats.total === 1 ? "seat" : "seats"}` : ""}</p>
     </div>
-    <button class="close" onclick={onclose} aria-label="Close {result.name}">
+    <button class="close press" onclick={onclose} aria-label="Close {result.name}">
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>
     </button>
   </header>
@@ -65,7 +65,7 @@
         <span class="pill" class:called={r.status === "called"} class:runoff={r.status === "runoff"}>{statusText(r)}</span>
         <span class="num reporting">{fmt.reporting(r.reporting)} of expected votes in</span>
       </div>
-      <div class="meter" aria-hidden="true"><span style:width="{Math.min(100, r.reporting)}%"></span></div>
+      <div class="meter" aria-hidden="true"><span style:transform="scaleX({Math.min(100, r.reporting) / 100})"></span></div>
       {@render candidates(r)}
       {#if r.totalVotes > 0}<p class="total num">{fmt.votes(r.totalVotes)} votes counted</p>{/if}
     {/each}
@@ -87,7 +87,7 @@
               {#if c.winner}<svg class="check" viewBox="0 0 16 16" width="14" height="14" aria-label="Winner"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>{/if}
             </span>
             <span class="party">{c.partyName}{c.incumbent ? " · Incumbent" : ""}</span>
-            <span class="share" aria-hidden="true"><span style:width="{c.percent}%" style:background={partyVar[c.party]}></span></span>
+            <span class="share" aria-hidden="true"><span style:transform="scaleX({c.percent / 100})" style:background={partyVar[c.party]}></span></span>
           </th>
           <td class="num">{fmt.votes(c.votes)}</td>
           <td class="num pct">{r.totalVotes ? fmt.pct(c.percent) : "-"}</td>
@@ -103,7 +103,9 @@
   h2 { margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 550; letter-spacing: -0.015em; line-height: 1.1; font-variation-settings: "SOFT" 50, "WONK" 0; }
   .meta { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
   .close { display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 999px; background: var(--raised); color: var(--ink); cursor: pointer; flex: none; }
-  .close:hover { background: var(--active); }
+  @media (hover: hover) and (pointer: fine) {
+    .close:hover { background: var(--active); }
+  }
 
   .status { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
   .pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--raised); color: var(--ink); }
@@ -111,7 +113,10 @@
   .pill.runoff { background: var(--notice-bg); color: var(--notice-ink); }
   .reporting { font-size: 13px; color: var(--muted); }
   .meter { height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; margin-top: -8px; }
-  .meter span { display: block; height: 100%; background: var(--ink); transition: width var(--motion-slow) var(--motion-ease); }
+  /* Bars grow from their axis when the panel opens, then glide as counts come in. */
+  .meter span, .share span { display: block; height: 100%; transform-origin: left; transition: transform var(--dur-data) var(--ease-in-out); }
+  .meter span { background: var(--ink); }
+  @starting-style { .meter span, .share span { transform: scaleX(0); } }
 
   .cands { width: 100%; border-collapse: collapse; }
   .cands th, .cands td { padding: 10px 0; border-top: 1px solid var(--rule); vertical-align: top; text-align: left; font-weight: 400; }
@@ -123,7 +128,6 @@
   .check { color: var(--ink); flex: none; }
   .party { display: block; margin: 2px 0 6px 18px; font-size: 12px; color: var(--muted); }
   .share { display: block; height: 6px; margin-left: 18px; border-radius: 3px; background: var(--raised); overflow: hidden; }
-  .share span { display: block; height: 100%; transition: width var(--motion-slow) var(--motion-ease); }
   .total { margin: -6px 0 0; font-size: 12px; color: var(--muted); }
 
   .seats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 0; margin: 0; border: 1px solid var(--border); border-radius: 8px; }
@@ -147,4 +151,7 @@
   .dname { font-weight: 600; white-space: nowrap; }
   .dline { color: var(--muted); font-size: 13px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .districts .pill { height: 20px; font-size: 11px; }
+  @media (prefers-reduced-motion: reduce) {
+    .meter span, .share span { transition: none; }
+  }
 </style>

@@ -9,7 +9,7 @@
   import CalledFeed from "./components/CalledFeed.svelte";
   import { CHAMBERS, STATES, type Chamber } from "./lib/config";
   import { byState, secured, tally } from "./lib/model";
-  import { partyName } from "./lib/colors";
+  import { partyVar } from "./lib/colors";
   import { live } from "./lib/live.svelte";
   import { route } from "./lib/route.svelte";
 
@@ -81,12 +81,53 @@
     return () => mq.removeEventListener("change", on);
   });
 
+  // States called in the last few seconds on this chamber pulse once on the map.
+  const flash = $derived(
+    live.called
+      .filter((c) => c.chamber === chamber && live.now - c.at.getTime() < 6000)
+      .map((c) => ({ key: c.chamber + c.race.key + c.at.getTime(), state: c.race.state, color: c.race.party ? partyVar[c.race.party] : "var(--ink)" })),
+  );
+
   let sheet: HTMLDialogElement | undefined = $state();
+  // The sheet keeps showing the last state while it slides away, instead of emptying first.
+  let sheetResult = $state<typeof selectedResult>(null);
+  $effect(() => {
+    if (selectedResult) sheetResult = selectedResult;
+  });
   $effect(() => {
     if (!sheet) return;
     if (selectedResult && !wide && !sheet.open) sheet.showModal();
     if ((!selectedResult || wide) && sheet.open) sheet.close();
   });
+
+  // Swipe the sheet down to close it: far enough, or a quick flick, either one dismisses.
+  let drag: { y: number; t: number; dy: number } | null = null;
+  function dragStart(e: PointerEvent) {
+    if (drag || !sheet) return;
+    drag = { y: e.clientY, t: performance.now(), dy: 0 };
+    sheet.style.transition = "none";
+    // Capture can throw when the pointer is already gone (a cancelled touch); the drag still works without it.
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+  }
+  function dragMove(e: PointerEvent) {
+    if (!drag || !sheet) return;
+    const raw = e.clientY - drag.y;
+    // Pulling up past the top meets friction instead of a wall.
+    drag.dy = raw > 0 ? raw : -Math.sqrt(-raw) * 2;
+    sheet.style.transform = `translateY(${drag.dy}px)`;
+  }
+  function dragEnd() {
+    if (!drag || !sheet) return;
+    const { dy, t } = drag;
+    const velocity = dy / (performance.now() - t);
+    drag = null;
+    // Clearing the inline styles lets the stylesheet transition carry on from where the finger left it.
+    sheet.style.transition = "";
+    sheet.style.transform = "";
+    if (dy > 120 || (dy > 12 && velocity > 0.11)) close();
+  }
 
   const select = (s: string) => route.go(chamber, s);
   const close = () => route.close();
@@ -108,7 +149,9 @@
     <a class="brand" href="https://dins.dev" aria-label="dins, home">{@html wordmark}</a>
     <span class="product">Midterms 2026</span>
     <p class="fresh" class:warn={live.failing || !live.lastOk} aria-live="polite">
-      <span class="dot" class:off={live.failing || !live.lastOk} aria-hidden="true"></span>{freshness}
+      <span class="dot" class:off={live.failing || !live.lastOk} aria-hidden="true">
+        {#key live.lastOk}{#if live.lastOk && !live.failing}<span class="ping"></span>{/if}{/key}
+      </span>{freshness}
     </p>
   </div>
 </header>
@@ -124,6 +167,7 @@
       <button
         id="tab-{tab.id}"
         role="tab"
+        class="press"
         aria-selected={chamber === tab.id}
         aria-controls="view"
         tabindex={chamber === tab.id ? 0 : -1}
@@ -153,20 +197,24 @@
             <li><span class="sw none"></span>No race</li>
           </ul>
         </div>
-        <USMap {results} {selected} onselect={select} />
+        <USMap {chamber} {results} {selected} {flash} onselect={select} />
         {#if chamber === "house"}<p class="note">States are shaded by which party is ahead in more of their districts. Open a state for every district.</p>{/if}
       </section>
 
       {#if wide}
         <aside class="card rail" aria-label={selectedResult ? `${selectedResult.name} results` : "Races to watch and recent calls"}>
           <div class="rail-body">
-            {#if selectedResult}
-              <StatePanel {chamber} result={selectedResult} closing={live.closings[selectedResult.state]} now={live.now} onclose={close} />
-            {:else}
-              <Watchlist {chamber} {results} houseRaces={chamber === "house" ? races : null} onselect={select} />
-              <div class="rail-gap"></div>
-              <CalledFeed items={live.called} {calledSoFar} onselect={(i) => route.go(i.chamber, i.race.state)} />
-            {/if}
+            {#key selected ?? chamber}
+              <div class="swap">
+                {#if selectedResult}
+                  <StatePanel {chamber} result={selectedResult} closing={live.closings[selectedResult.state]} now={live.now} onclose={close} />
+                {:else}
+                  <Watchlist {chamber} {results} houseRaces={chamber === "house" ? races : null} onselect={select} />
+                  <div class="rail-gap"></div>
+                  <CalledFeed items={live.called} {calledSoFar} onselect={(i) => route.go(i.chamber, i.race.state)} />
+                {/if}
+              </div>
+            {/key}
           </div>
         </aside>
       {:else}
@@ -184,10 +232,12 @@
 </main>
 
 <dialog class="sheet" bind:this={sheet} onclose={() => route.state && close()} onclick={(e) => e.target === sheet && close()} aria-label={selectedResult ? `${selectedResult.name} results` : "Results"}>
-  {#if selectedResult && !wide}
+  {#if sheetResult && !wide}
     <div class="sheet-body">
-      <span class="grip" aria-hidden="true"></span>
-      <StatePanel {chamber} result={selectedResult} closing={live.closings[selectedResult.state]} now={live.now} onclose={close} />
+      <div class="grip-zone" aria-hidden="true" onpointerdown={dragStart} onpointermove={dragMove} onpointerup={dragEnd} onpointercancel={dragEnd}>
+        <span class="grip"></span>
+      </div>
+      <StatePanel {chamber} result={sheetResult} closing={live.closings[sheetResult.state]} now={live.now} onclose={close} />
     </div>
   {/if}
 </dialog>
@@ -214,9 +264,11 @@
   .product { font-size: 14px; font-weight: 600; color: var(--muted); padding-left: 12px; box-shadow: inset 1px 0 0 var(--border); }
   .fresh { margin: 0 0 0 auto; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
   .fresh.warn { color: var(--notice-ink); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 2s ease-in-out infinite; }
-  .dot.off { background: var(--muted); animation: none; }
-  @keyframes pulse { 50% { opacity: 0.35; } }
+  .dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .dot.off { background: var(--muted); }
+  /* One ping each time fresh data lands, so the motion means "new numbers", not decoration. */
+  .ping { position: absolute; inset: 0; border-radius: 50%; background: var(--accent); opacity: 0; animation: ping 900ms var(--ease-out); }
+  @keyframes ping { from { opacity: 0.6; transform: scale(1); } to { opacity: 0; transform: scale(2.6); } }
 
   .title { padding: 28px 0 16px; }
   h1 { margin: 0; font-family: var(--font-display); font-size: 32px; font-weight: 550; line-height: 1.1; letter-spacing: -0.02em; font-variation-settings: "SOFT" 50, "WONK" 0; }
@@ -236,6 +288,9 @@
   .rail { position: relative; padding: 0; min-height: 320px; }
   .rail-body { position: absolute; inset: 0; overflow-y: auto; padding: 20px; overscroll-behavior: contain; }
   .rail-gap { height: 24px; }
+  /* Swapping the rail between the list and a state: a short settle, quick enough for repeated clicks. */
+  .swap { animation: swap-in 180ms var(--ease-out); }
+  @keyframes swap-in { from { opacity: 0; transform: translateY(4px); } }
   .map-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
   h2 { margin: 0; font-size: 16px; font-weight: 600; }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--muted); }
@@ -252,12 +307,21 @@
 
   .phone-extras { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
 
-  .sheet { width: 100%; max-width: 100%; max-height: 88dvh; margin: auto 0 0; padding: 0; border: 0; border-radius: 16px 16px 0 0; background: var(--surface); color: var(--ink); box-shadow: 0 -8px 30px rgb(0 0 0 / 0.18); }
-  .sheet::backdrop { background: rgb(18 24 28 / 0.4); }
-  .sheet[open] { animation: rise var(--motion-slow) var(--motion-ease); }
-  .sheet-body { padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); }
-  .grip { display: block; width: 36px; height: 4px; margin: 0 auto 12px; border-radius: 2px; background: var(--active); }
-  @keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+  /* A drawer: slides up on the iOS sheet curve, leaves faster than it arrives. */
+  .sheet {
+    width: 100%; max-width: 100%; max-height: 88dvh; margin: auto 0 0; padding: 0; border: 0; border-radius: 16px 16px 0 0;
+    background: var(--surface); color: var(--ink); box-shadow: 0 -8px 30px rgb(0 0 0 / 0.18);
+    transform: translateY(100%);
+    transition: transform 240ms var(--ease-out), overlay 240ms allow-discrete, display 240ms allow-discrete;
+  }
+  .sheet[open] { transform: translateY(0); transition-duration: 420ms; transition-timing-function: var(--ease-drawer); }
+  @starting-style { .sheet[open] { transform: translateY(100%); } }
+  .sheet::backdrop { background: rgb(18 24 28 / 0); transition: background 240ms ease, overlay 240ms allow-discrete, display 240ms allow-discrete; }
+  .sheet[open]::backdrop { background: rgb(18 24 28 / 0.4); }
+  @starting-style { .sheet[open]::backdrop { background: rgb(18 24 28 / 0); } }
+  .sheet-body { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
+  .grip-zone { display: grid; place-items: center; height: 28px; margin: 0 -16px 4px; touch-action: none; cursor: grab; }
+  .grip { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--active); }
 
   .foot { display: flex; gap: 16px; align-items: start; padding-top: 16px; padding-bottom: 48px; font-size: 13px; color: var(--muted); }
   .foot p { margin: 0 0 8px; max-width: 80ch; }
@@ -279,7 +343,11 @@
     .product { display: none; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .dot { animation: none; }
-    .sheet[open] { animation: none; }
+    .ping { animation: none; }
+    .swap { animation-name: fade-in; }
+    @keyframes fade-in { from { opacity: 0; } }
+    .sheet { transform: none; opacity: 0; transition: opacity 200ms ease, overlay 200ms allow-discrete, display 200ms allow-discrete; }
+    .sheet[open] { transform: none; opacity: 1; }
+    @starting-style { .sheet[open] { transform: none; opacity: 0; } }
   }
 </style>

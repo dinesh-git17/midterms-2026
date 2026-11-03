@@ -68,3 +68,59 @@
   `#senate` on the site, fonts load, no console errors.
 - Seen once: a browser in a cold data center sat on "Connecting" for several seconds
   until civicAPI answered; it then filled in without a reload.
+
+## 2026-11-03: share card and motion pass
+
+- Approval: Din said "Yes make the card! Also use the available motion skills to add
+  better UX to the page". Redeploying this work still needs a separate OK.
+
+### Share card
+
+- Art: Antigravity `agy` (gemini-3.8-flash-high), a text-free riso Capitol dome,
+  saved as `og/capitol-art.png`. Type is set in HTML (`og/card.html`), never in the
+  generated image, so it stays sharp and spelled right.
+- `og/render.sh` renders the card with headless Chrome to `public/og.jpg` (1200 x 630,
+  JPEG 85, about 377 KB). `index.html` carries the `og:image` and `twitter:card` tags.
+
+### Motion decisions (emil-design-eng)
+
+| Element | Motion | Why |
+| --- | --- | --- |
+| Tabs, sort buttons, close | none on switch; 0.97 press scale | Used constantly, so instant; the press confirms the tap |
+| Balance figures | count up over 600 ms on a call; instant on chamber switch | A call is the news; switching is user-driven and frequent |
+| Balance bar segments | flex-basis 600 ms ease-in-out, reset on chamber switch | Shows seats moving between columns |
+| Map | newly called state rings twice (2.4 s); fill fades 600 ms | Points at the change without a permanent pulse |
+| Called feed | 280 ms arrive, 2.4 s tint, 50 ms stagger only within one poll | New items read as new; old ones never re-animate |
+| Race list | 300 ms FLIP on re-sort | Rows keep their identity when order changes |
+| Live dot | one 900 ms ping per successful poll, no endless pulse | Means "data arrived", not decoration |
+| Phone sheet | 420 ms drawer curve in, 240 ms out; swipe down, flick at 0.11 px/ms; friction upward | Exit faster than enter; flick feels native |
+| Tooltip | 125 ms in, stays mounted between states | No flicker crossing state borders |
+| Reduced motion | movement removed, opacity and colour fades kept | Still shows that something changed |
+
+### Bugs found and fixed
+
+- `each_key_duplicate` in the called feed when civicAPI withdraws a call and makes it
+  again (latent in the deployed v1). `mergeCalled` drops the older entry and keys carry
+  the call time.
+- Every return to a visible tab polled at once, so quick tab flips fired a request
+  each (seen as polls every 2 s in a pane that flickers visible). `dueIn` now waits out
+  the rest of the 30 s interval.
+- The balance figures sat 18 px apart when only one side had a "+N leading" line. The
+  sub-line reserves two lines on both sides, which also stops the bar shifting when a
+  lead appears.
+- The sheet drag set `transition: none` after pointer capture, so a capture failure
+  skipped it. Order swapped and capture guarded.
+
+### Verification
+
+- `npm run check`: 0 errors, 0 warnings. `npm test`: 21 passed.
+- Taste lint: 0 FAIL, 12 WARN (unchanged). Inspector on the production preview: 0 FAIL,
+  1 WARN (paper tone, kept). Screenshots at 1440 and 390 looked right after the
+  alignment fix.
+- Browser (dev, 375 and 1440): a flick closes the sheet and restores `#senate`, a slow
+  60 px drag snaps back, pulling up 80 px moves it 18 px, content stays during the exit.
+  An injected call rings the state and staggers the feed (0 to 250 ms). Tab switch shows
+  the other chamber's figures at once. Six reduced-motion rules present.
+- Limit: the in-app browser pane was hidden most of the time, which throttles animation
+  frames, so the count-up was seen starting and landing but not frame by frame. Worth
+  a look on a real phone.

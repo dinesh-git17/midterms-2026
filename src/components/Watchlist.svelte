@@ -78,7 +78,10 @@
     text-align: left;
     cursor: pointer;
   }
-  button:hover { background: var(--raised); }
+  button:active { background: var(--active); }
+  @media (hover: hover) and (pointer: fine) {
+    button:hover { background: var(--raised); }
+  }
   li + li { border-top: 1px solid var(--rule); }
   .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .name { font-size: 14px; font-weight: 600; }

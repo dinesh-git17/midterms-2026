@@ -9,10 +9,19 @@
   import type { StateResult } from "../lib/model";
 
   let {
+    chamber,
     results,
     selected,
+    flash = [],
     onselect,
-  }: { results: Map<string, StateResult> | null; selected: string | null; onselect: (state: string) => void } = $props();
+  }: {
+    chamber: string;
+    results: Map<string, StateResult> | null;
+    selected: string | null;
+    /** States called in the last few seconds, with the winning party colour, for a one-time pulse. */
+    flash?: { key: string; state: string; color: string }[];
+    onselect: (state: string) => void;
+  } = $props();
 
   // us-atlas ships these shapes already projected to Albers USA on a 975 x 610 canvas.
   const topo = us as unknown as Parameters<typeof feature>[0];
@@ -32,12 +41,20 @@
 
   let hover = $state<{ code: string; x: number; y: number } | null>(null);
   const hovered = $derived(hover ? results?.get(hover.code) : undefined);
+  const byCode = new Map(shapes.map((s) => [s.code, s]));
 
+  // Leaving one state for the next keeps the tooltip mounted, so it only fades in the first time.
+  let leaveTimer: ReturnType<typeof setTimeout> | undefined;
   function move(e: PointerEvent, code: string) {
     if (e.pointerType !== "mouse") return;
+    clearTimeout(leaveTimer);
     const box = (e.currentTarget as SVGElement).ownerSVGElement!.parentElement!.getBoundingClientRect();
     hover = { code, x: e.clientX - box.left, y: e.clientY - box.top };
   }
+  const leave = () => {
+    clearTimeout(leaveTimer);
+    leaveTimer = setTimeout(() => (hover = null), 80);
+  };
 
   const ink = (r: StateResult | undefined) => (r && (r.status === "called" || (r.status === "leading" && r.strength > 0.6)) ? "on-fill" : "");
   const label = (code: string) => {
@@ -55,6 +72,8 @@
         <rect width="2" height="6" fill="var(--hatch)" />
       </pattern>
     </defs>
+    <!-- Keyed by chamber: switching tabs repaints at once instead of cross-fading fifty states. -->
+    {#key chamber}
     {#each shapes as s (s.code)}
       {@const r = results?.get(s.code)}
       <!-- svelte-ignore a11y_no_noninteractive_tabindex (the role is "button" whenever tabindex is set) -->
@@ -70,8 +89,13 @@
         onclick={() => r && onselect(s.code)}
         onkeydown={(e) => r && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onselect(s.code))}
         onpointermove={(e) => move(e, s.code)}
-        onpointerleave={() => (hover = null)}
+        onpointerleave={leave}
       />
+    {/each}
+    {/key}
+    {#each flash as f (f.key)}
+      {@const s = byCode.get(f.state)}
+      {#if s}<path d={s.d} class="flash" style:stroke={f.color} />{/if}
     {/each}
     {#each shapes.filter((s) => s.code === selected) as s (s.code)}
       <path d={s.d} class="outline" />
@@ -98,11 +122,20 @@
     stroke-width: 0.9;
     stroke-linejoin: round;
     cursor: pointer;
-    transition: fill var(--motion-slow) var(--motion-ease);
+    transition: fill var(--dur-data) ease;
     outline: none;
   }
   .state.none { cursor: default; fill: var(--map-none); }
-  .state:not(.none):hover { filter: brightness(0.94); }
+  @media (hover: hover) and (pointer: fine) {
+    .state:not(.none):hover { filter: brightness(0.94); }
+  }
+  /* A newly called state: a ring in the winner's colour that pulses twice and fades. */
+  .flash { fill: none; stroke-width: 3; stroke-linejoin: round; pointer-events: none; opacity: 0; animation: flash 2400ms ease-out; }
+  @keyframes flash {
+    0%, 100% { opacity: 0; }
+    12%, 40% { opacity: 1; }
+    26% { opacity: 0.35; }
+  }
   .state:focus-visible { stroke: var(--focus); stroke-width: 3; }
   .outline { fill: none; stroke: var(--ink); stroke-width: 2.5; pointer-events: none; }
   .abbr {
@@ -128,8 +161,11 @@
     font-size: 13px;
     pointer-events: none;
     box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+    transform-origin: left center;
+    animation: tip-in 125ms var(--ease-out);
   }
+  @keyframes tip-in { from { opacity: 0; transform: translate(12px, -50%) scale(0.97); } }
   @media (prefers-reduced-motion: reduce) {
-    .state { transition: none; }
+    .tip { animation: none; }
   }
 </style>

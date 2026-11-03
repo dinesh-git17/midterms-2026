@@ -18,9 +18,11 @@ starting or resuming work, and keep them current.
 
 - `npm run dev`: dev server on http://127.0.0.1:5189 (Worker included).
 - `npm run preview`: production build served on port 5190.
-- `npm test`: vitest (model and describe tests; the Worker has none yet).
+- `npm test`: vitest (model, describe, called-feed and poll timing tests; the Worker has none yet).
 - `npm run check`: svelte-check, must report 0 errors and 0 warnings.
 - `npm run deploy`: build and `wrangler deploy`. Deploy only with Din's OK.
+- `sh og/render.sh`: re-render the share card (`og/card.html` over `og/capitol-art.png`)
+  to `public/og.jpg`. Needs Google Chrome installed.
 
 ## Conventions
 

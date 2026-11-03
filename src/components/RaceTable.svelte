@@ -3,6 +3,9 @@
   import { fillFor } from "../lib/colors";
   import { stateLine } from "../lib/describe";
   import { fmt, type StateResult } from "../lib/model";
+  import { flip } from "svelte/animate";
+  import { cubicInOut } from "svelte/easing";
+  import { prefersReducedMotion } from "svelte/motion";
 
   let {
     chamber,
@@ -41,7 +44,7 @@
     <h2 id="list-title">Every {CHAMBERS[chamber].label === "Governors" ? "governor's" : CHAMBERS[chamber].label} race{chamber === "house" ? ", by state" : ""}</h2>
     <div class="sorts" role="radiogroup" aria-label="Sort races">
       {#each sorts as [key, text] (key)}
-        <button role="radio" aria-checked={sort === key} class:on={sort === key} onclick={() => (sort = key)}>{text}</button>
+        <button role="radio" aria-checked={sort === key} class="press" class:on={sort === key} onclick={() => (sort = key)}>{text}</button>
       {/each}
     </div>
   </div>
@@ -52,8 +55,9 @@
     </ul>
   {:else}
     <ul class="rows">
+      <!-- When a poll reorders "Closest" or "Most counted", rows glide to their new places instead of jumping. -->
       {#each rows as s (s.state)}
-        <li>
+        <li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 300, easing: cubicInOut }}>
           <button class:active={selected === s.state} onclick={() => onselect(s.state)}>
             <span class="sw" style:background={fillFor(s)} aria-hidden="true"></span>
             <span class="name">{s.name}</span>
@@ -91,7 +95,10 @@
     cursor: pointer;
     border-radius: 4px;
   }
-  .rows button:hover { background: var(--raised); }
+  .rows button:active { background: var(--active); }
+  @media (hover: hover) and (pointer: fine) {
+    .rows button:hover { background: var(--raised); }
+  }
   .rows button.active { background: var(--active); }
   .sw { width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--border); }
   .name { font-size: 14px; font-weight: 600; }

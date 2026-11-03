@@ -26,8 +26,12 @@ accepted (Din signed off).
 | Task | Status |
 | --- | --- |
 | County map in state panel | planned |
-| "Just called" map highlight | planned |
+| "Just called" map highlight | verified (browser, injected call) |
 | Rail scroll hint when content overflows the map height | planned |
-| Motion pass, impeccable review, web-design-guidelines check | planned |
-| OG share card via Antigravity | planned, needs Din's OK |
+| Motion pass (emil-design-eng) | verified (browser; tween frames limited by a hidden pane) |
+| impeccable review, web-design-guidelines check | planned |
+| OG share card via Antigravity | done (Din approved; renders with `og/render.sh`) |
+| Called feed dedupe (`each_key_duplicate` when a call is withdrawn and made again) | verified (4 tests) |
+| Poll at most every 30 s when the tab regains focus | verified (3 tests, browser: polls at 0, 31, 61 s) |
+| Redeploy with phase 2 work | planned, needs Din's OK |
 | Worker tests (`trimRace`, retry, stale fallback) | planned |

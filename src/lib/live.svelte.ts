@@ -1,11 +1,9 @@
 import { POLL_MS, SUMMARY_IDS, type Chamber } from "./config";
 import { newlyCalled, toRaces, type Race, type RawRace } from "./model";
+import { mergeCalled, type CalledItem } from "./called";
+import { dueIn } from "./poll";
 
-export interface CalledItem {
-  chamber: Chamber;
-  race: Race;
-  at: Date;
-}
+export type { CalledItem };
 
 const CHAMBER_LIST: Chamber[] = ["senate", "house", "governor"];
 
@@ -26,20 +24,28 @@ class Live {
 
   #timer: ReturnType<typeof setTimeout> | undefined;
   #inflight = false;
+  #lastPoll = 0;
 
   start() {
     this.poll();
     this.loadClosings();
     setInterval(() => (this.now = Date.now()), 1000);
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") this.poll();
-      else clearTimeout(this.#timer);
+      if (document.visibilityState !== "visible") return clearTimeout(this.#timer);
+      // Coming back to the tab polls only when the last poll is due; quick tab flips wait.
+      const wait = dueIn(this.#lastPoll, Date.now());
+      if (!wait) this.poll();
+      else {
+        clearTimeout(this.#timer);
+        this.#timer = setTimeout(() => this.poll(), wait);
+      }
     });
   }
 
   async poll() {
     if (this.#inflight) return;
     this.#inflight = true;
+    this.#lastPoll = Date.now();
     clearTimeout(this.#timer);
     try {
       let ok = 0;
@@ -53,7 +59,7 @@ class Live {
           if (before) {
             const at = new Date();
             const fresh = newlyCalled(before, next).map((race) => ({ chamber, race, at }));
-            if (fresh.length) this.called = [...fresh, ...this.called].slice(0, 30);
+            if (fresh.length) this.called = mergeCalled(this.called, fresh);
           }
           this.races[chamber] = next;
           this.apiUpdated[chamber] = res.body.last_updated ?? null;

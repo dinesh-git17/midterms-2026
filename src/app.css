@@ -35,9 +35,13 @@
 
   --font-display: "Fraunces", Georgia, serif;
   --font-text: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --motion-fast: 150ms;
-  --motion-slow: 400ms;
-  --motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Motion: fast where the user acts, slower only where data changes and the change is the news. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 140ms;
+  --dur-ui: 200ms;
+  --dur-data: 600ms;
   --col: 1208px;
   --pad: 24px;
   --gap: 24px;
@@ -84,12 +88,16 @@ body {
 }
 .num { font-variant-numeric: tabular-nums; }
 button { font: inherit; }
+/* Press feedback for small controls (tabs, sort, close). Full-width rows darken instead of scaling. */
+.press { transition: transform var(--dur-press) var(--ease-out); }
+.press:active { transform: scale(0.97); }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 ::selection { background: color-mix(in oklab, var(--accent) 25%, transparent); }
+/* Reduced motion: no movement or scaling anywhere; components keep their opacity and colour fades. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  .press:active { transform: none; }
 }
