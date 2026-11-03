@@ -19,7 +19,7 @@ accepted (Din signed off).
 | Phone layout and bottom sheet, Back closes | verified (375 px emulation) |
 | svelte-check, tests, taste lint and inspector | verified (0 errors, 14 pass, 0 FAIL) |
 | Docs, AGENTS.md, first commit | done |
-| Deploy to midterms.dins.dev | planned, waiting on Din's OK |
+| Deploy to midterms.dins.dev | verified live (Din approved deploy) |
 
 ## Phase 2
 
@@ -30,4 +30,4 @@ accepted (Din signed off).
 | Rail scroll hint when content overflows the map height | planned |
 | Motion pass, impeccable review, web-design-guidelines check | planned |
 | OG share card via Antigravity | planned, needs Din's OK |
-| Worker tests | planned |
+| Worker tests (`trimRace`, retry, stale fallback) | planned |

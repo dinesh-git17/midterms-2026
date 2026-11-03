@@ -85,7 +85,17 @@ async function closingsResponse(id: string, ctx: ExecutionContext): Promise<Resp
 }
 
 /** Fetches one race and trims it, or returns null when the answer is unusable. */
+// civicAPI sometimes answers a cold request with an empty 200. Retry a fast failure once,
+// since a data center that has never cached a race has no stale copy to fall back on.
 async function fetchRace(id: string): Promise<Json | null> {
+  const started = Date.now();
+  const first = await fetchRaceOnce(id);
+  if (first || Date.now() - started > 4000) return first;
+  await new Promise((r) => setTimeout(r, 500));
+  return fetchRaceOnce(id);
+}
+
+async function fetchRaceOnce(id: string): Promise<Json | null> {
   try {
     const res = await fetch(UPSTREAM + id, {
       headers: { accept: "application/json", "user-agent": "midterms.dins.dev (cached proxy)" },

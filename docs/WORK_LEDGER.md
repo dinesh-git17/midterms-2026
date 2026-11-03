@@ -46,6 +46,25 @@
 
 ### Open items
 
-- Deploy to midterms.dins.dev (needs a route or custom domain in `wrangler.jsonc`).
 - OG share card via Antigravity (needs Din's OK before generating).
 - Phase 2 list in `docs/TASKS.md`.
+
+## 2026-11-03: first deploy
+
+- Approval: Din said "Yes, deploy it".
+- `wrangler.jsonc` gained the custom domain route `midterms.dins.dev`. Deployed as
+  Worker `dins-midterms-2026`; current version after the fix below is
+  ba79094b-5b06-4be3-9cee-f3082ff94e76.
+- Found on the first live requests: House and Governors returned 502 once each (one
+  fast empty answer, one 8 s timeout). Cloudflare's cache is per data center, so the
+  first visitor in a region has no stale copy. Fix: the Worker retries a fast upstream
+  failure once (not a timeout). Redeployed.
+- Found while fixing: `worker/` was never typechecked (svelte-check only covers `src`)
+  and its tsconfig pulled in the DOM lib, hiding `caches.default`. Set `lib` to ES2022
+  and added `tsc -p worker` to `npm run check`.
+- Verified live: page 200 with CSP, nosniff and referrer headers; all three race
+  endpoints 200, cache hits at about 0.2 s; closings 200; a bad id returns 404. In the
+  browser: `#senate/ky` deep link opens the sheet with live counts, Close returns to
+  `#senate` on the site, fonts load, no console errors.
+- Seen once: a browser in a cold data center sat on "Connecting" for several seconds
+  until civicAPI answered; it then filled in without a reload.
