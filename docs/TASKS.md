@@ -33,5 +33,6 @@ accepted (Din signed off).
 | OG share card via Antigravity | done (Din approved; renders with `og/render.sh`) |
 | Called feed dedupe (`each_key_duplicate` when a call is withdrawn and made again) | verified (4 tests) |
 | Poll at most every 30 s when the tab regains focus | verified (3 tests, browser: polls at 0, 31, 61 s) |
-| Redeploy with phase 2 work | planned, needs Din's OK |
+| Load motion and skeleton polish | verified (browser at 375 and 1440, dark and light) |
+| Redeploy with phase 2 work | approved by Din ("then deploy") |
 | Worker tests (`trimRace`, retry, stale fallback) | planned |

@@ -51,10 +51,12 @@
 
   {#if !results}
     <ul class="rows">
-      {#each Array(8) as _, i (i)}<li class="skel"><span></span><span></span></li>{/each}
+      {#each [112, 84, 128, 96, 76, 120, 92, 104] as w, i (i)}
+        <li class="skel" aria-hidden="true"><span class="sk sq"></span><span class="sk" style:width="{w}px"></span><span class="sk grow"></span><span class="sk fig"></span></li>
+      {/each}
     </ul>
   {:else}
-    <ul class="rows">
+    <ul class="rows in">
       <!-- When a poll reorders "Closest" or "Most counted", rows glide to their new places instead of jumping. -->
       {#each rows as s (s.state)}
         <li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 300, easing: cubicInOut }}>
@@ -105,9 +107,14 @@
   .line { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pct { font-size: 13px; text-align: right; min-width: 52px; }
   .unit { color: var(--muted); }
-  .skel { height: 44px; display: flex; align-items: center; gap: 12px; }
-  .skel span { height: 12px; width: 120px; border-radius: 4px; background: var(--skeleton); }
-  .skel span + span { width: 40%; }
+  /* Real rows replace the skeleton with a short fade, so the swap reads as one surface filling in. */
+  .in { animation: fade-in 280ms ease; }
+  @keyframes fade-in { from { opacity: 0; } }
+  .skel { height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 8px; }
+  .skel .sk { height: 12px; }
+  .skel .sq { width: 14px; height: 14px; border-radius: 3px; }
+  .skel .grow { flex: 0 1 30%; height: 10px; }
+  .skel .fig { width: 40px; margin-left: auto; }
 
   @media (max-width: 860px) {
     .rows { columns: 1; }

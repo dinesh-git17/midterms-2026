@@ -21,6 +21,8 @@ starting or resuming work, and keep them current.
 - `npm test`: vitest (model, describe, called-feed and poll timing tests; the Worker has none yet).
 - `npm run check`: svelte-check, must report 0 errors and 0 warnings.
 - `npm run deploy`: build and `wrangler deploy`. Deploy only with Din's OK.
+- Dev only: open `http://127.0.0.1:5189/?hold` to keep the page on its loading
+  skeleton, then run `__live.start()` in the console to watch the first-load reveal.
 - `sh og/render.sh`: re-render the share card (`og/card.html` over `og/capitol-art.png`)
   to `public/og.jpg`. Needs Google Chrome installed.
 

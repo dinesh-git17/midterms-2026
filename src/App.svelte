@@ -148,8 +148,8 @@
   <div class="col bar-inner">
     <a class="brand" href="https://dins.dev" aria-label="dins, home">{@html wordmark}</a>
     <span class="product">Midterms 2026</span>
-    <p class="fresh" class:warn={live.failing || !live.lastOk} aria-live="polite">
-      <span class="dot" class:off={live.failing || !live.lastOk} aria-hidden="true">
+    <p class="fresh" class:warn={live.failing || (!live.lastOk && !live.loading)} aria-live="polite">
+      <span class="dot" class:off={live.failing || !live.lastOk} class:wait={live.loading && !live.lastOk} aria-hidden="true">
         {#key live.lastOk}{#if live.lastOk && !live.failing}<span class="ping"></span>{/if}{/key}
       </span>{freshness}
     </p>
@@ -157,12 +157,16 @@
 </header>
 
 <main class="col">
-  <div class="title">
+  <div class="title enter">
     <h1>Midterm results, live</h1>
-    <p class="finding">{finding}</p>
+    {#if t}
+      <p class="finding in">{finding}</p>
+    {:else}
+      <p class="finding"><span class="sk finding-sk" aria-hidden="true"></span><span class="sr-only">{finding}</span></p>
+    {/if}
   </div>
 
-  <div class="tabs" role="tablist" aria-label="Choose a chamber">
+  <div class="tabs enter" style:--i="1" role="tablist" aria-label="Choose a chamber">
     {#each tabs as tab, i (tab.id)}
       <button
         id="tab-{tab.id}"
@@ -175,18 +179,18 @@
         onkeydown={(e) => onTabKey(e, i)}
       >
         {tab.label}
-        {#if live.races[tab.id]}<span class="count num">{live.races[tab.id]!.length}</span>{/if}
+        {#if live.races[tab.id]}<span class="count num">{live.races[tab.id]!.length}</span>{:else}<span class="count sk tab-sk" aria-hidden="true"></span>{/if}
       </button>
     {/each}
   </div>
 
   <div id="view" role="tabpanel" aria-labelledby="tab-{chamber}">
-    <div class="card balance-card">
+    <div class="card balance-card enter" style:--i="2">
       <BalanceBar {chamber} {t} />
     </div>
 
     <div class="grid">
-      <section class="card map-card" aria-labelledby="map-title">
+      <section class="card map-card enter" style:--i="3" aria-labelledby="map-title">
         <div class="map-head">
           <h2 id="map-title">{chamber === "house" ? "House seats by state" : `${CHAMBERS[chamber].label} races by state`}</h2>
           <ul class="legend" aria-label="Map key">
@@ -202,7 +206,7 @@
       </section>
 
       {#if wide}
-        <aside class="card rail" aria-label={selectedResult ? `${selectedResult.name} results` : "Races to watch and recent calls"}>
+        <aside class="card rail enter" style:--i="4" aria-label={selectedResult ? `${selectedResult.name} results` : "Races to watch and recent calls"}>
           <div class="rail-body">
             {#key selected ?? chamber}
               <div class="swap">
@@ -211,21 +215,21 @@
                 {:else}
                   <Watchlist {chamber} {results} houseRaces={chamber === "house" ? races : null} onselect={select} />
                   <div class="rail-gap"></div>
-                  <CalledFeed items={live.called} {calledSoFar} onselect={(i) => route.go(i.chamber, i.race.state)} />
+                  <CalledFeed items={live.called} {calledSoFar} loading={!live.lastOk} onselect={(i) => route.go(i.chamber, i.race.state)} />
                 {/if}
               </div>
             {/key}
           </div>
         </aside>
       {:else}
-        <div class="phone-extras">
+        <div class="phone-extras enter" style:--i="4">
           <div class="card"><Watchlist {chamber} {results} houseRaces={chamber === "house" ? races : null} onselect={select} /></div>
-          <div class="card"><CalledFeed items={live.called} {calledSoFar} onselect={(i) => route.go(i.chamber, i.race.state)} /></div>
+          <div class="card"><CalledFeed items={live.called} {calledSoFar} loading={!live.lastOk} onselect={(i) => route.go(i.chamber, i.race.state)} /></div>
         </div>
       {/if}
     </div>
 
-    <div class="card">
+    <div class="card enter" style:--i="5">
       <RaceTable {chamber} {results} {selected} onselect={select} />
     </div>
   </div>
@@ -266,19 +270,23 @@
   .fresh.warn { color: var(--notice-ink); }
   .dot { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
   .dot.off { background: var(--muted); }
+  .dot.wait { animation: sk-pulse 1100ms var(--ease-in-out) infinite alternate; }
   /* One ping each time fresh data lands, so the motion means "new numbers", not decoration. */
   .ping { position: absolute; inset: 0; border-radius: 50%; background: var(--accent); opacity: 0; animation: ping 900ms var(--ease-out); }
   @keyframes ping { from { opacity: 0.6; transform: scale(1); } to { opacity: 0; transform: scale(2.6); } }
 
   .title { padding: 28px 0 16px; }
   h1 { margin: 0; font-family: var(--font-display); font-size: 32px; font-weight: 550; line-height: 1.1; letter-spacing: -0.02em; font-variation-settings: "SOFT" 50, "WONK" 0; }
-  .finding { margin: 8px 0 0; font-size: 16px; max-width: 70ch; }
+  .finding { margin: 8px 0 0; font-size: 16px; max-width: 70ch; min-height: 1.5em; }
+  .finding.in { animation: fade-in 320ms ease; }
+  .finding-sk { width: min(440px, 85%); height: 14px; margin-top: 5px; }
 
   .tabs { display: flex; gap: 24px; margin-bottom: 16px; box-shadow: inset 0 -1px 0 var(--border); overflow-x: auto; scrollbar-width: none; }
   .tabs button { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .tabs button[aria-selected="true"] { color: var(--ink); }
   .tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--ink); }
   .tabs .count { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .tabs .tab-sk { width: 20px; height: 10px; }
 
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
   .balance-card { margin-bottom: var(--gap); }
@@ -342,10 +350,11 @@
     .finding { font-size: 15px; }
     .product { display: none; }
   }
+  @keyframes fade-in { from { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) {
     .ping { animation: none; }
     .swap { animation-name: fade-in; }
-    @keyframes fade-in { from { opacity: 0; } }
+    .dot.wait { animation: none; }
     .sheet { transform: none; opacity: 0; transition: opacity 200ms ease, overlay 200ms allow-discrete, display 200ms allow-discrete; }
     .sheet[open] { transform: none; opacity: 1; }
     @starting-style { .sheet[open] { transform: none; opacity: 0; } }

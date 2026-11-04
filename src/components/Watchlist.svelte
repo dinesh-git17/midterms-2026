@@ -35,10 +35,16 @@
 
 <section class="watch" aria-labelledby="watch-title">
   <h2 id="watch-title">{title}</h2>
-  {#if items.length === 0}
-    <p class="empty">{chamber === "house" ? "No House votes counted yet. The closest races show here once counting starts." : "Loading races."}</p>
+  {#if !results}
+    <ul aria-hidden="true">
+      {#each [104, 72, 88, 64, 96] as w, i (i)}
+        <li class="skel"><span class="sk" style:width="{w}px"></span><span class="sk" style:width="{w + 48}px"></span></li>
+      {/each}
+    </ul>
+  {:else if items.length === 0}
+    <p class="empty">{chamber === "house" ? "No House votes counted yet. The closest races show here once counting starts." : "No races to watch yet."}</p>
   {:else}
-    <ul>
+    <ul class="in">
       {#each items as { race, state } (race.key)}
         {@const [a, b] = race.candidates}
         <li>
@@ -90,5 +96,10 @@
   .duel { display: flex; gap: 2px; height: 4px; margin-top: 4px; border-radius: 2px; overflow: hidden; }
   .duel span { flex-basis: 0; opacity: 0.85; }
   .empty { margin: 0; font-size: 13px; color: var(--muted); }
+  .in { animation: fade-in 280ms ease; }
+  @keyframes fade-in { from { opacity: 0; } }
+  .skel { display: grid; gap: 10px; padding: 14px 8px; }
+  .skel .sk { height: 12px; }
+  .skel .sk + .sk { height: 10px; }
 
 </style>

@@ -124,3 +124,47 @@
 - Limit: the in-app browser pane was hidden most of the time, which throttles animation
   frames, so the count-up was seen starting and landing but not frame by frame. Worth
   a look on a real phone.
+
+## 2026-11-03: load motion and skeleton polish
+
+- Request: Din said "looks good! Also add some motion on load and polish the skeleton
+  then deploy". That covers this deploy.
+
+### Load sequence (plays once per visit)
+
+- Sections settle in reading order: title, tabs, balance, map, rail, list. 520 ms
+  ease-out rise of 10 px with 60 ms steps. Fill mode `backwards`, so no transform stays
+  behind to break the tooltip or the sticky header.
+- When the first data lands: the big figures count up from zero (900 ms), the balance
+  bar grows in from both edges (the "open" segment stays as a filler so each party
+  grows from its own side), and the map states take their colours in a 420 ms
+  west-to-east sweep. Later polls and tab switches do none of this.
+- Reduced motion: sections fade only, no sweep, no grow, figures set at once.
+
+### Skeleton
+
+- Shapes match the real content: two figure blocks with sub-lines, the bar track,
+  the key count, the finding line, the tab counts, map shapes in the skeleton tone
+  without labels, watchlist rows (name and line), race rows (swatch, name, line,
+  figure), one feed line. One shared 1.1 s pulse; static under reduced motion.
+- Fixed while doing it: during loading the map painted every state as "No race", the
+  feed said "No races have been called tonight" before it knew, the watchlist said
+  "Loading races." in plain text, and "Connecting" used the warning colour.
+- Real content replaces the skeleton with a short fade.
+
+### Bug found
+
+- Inline `style:flex-basis` and `style:transform` outrank `@starting-style`, so the
+  StatePanel bars from the motion pass never grew in. Sizes now come in as CSS
+  variables (`--w`, `--x`) and the stylesheet sets the property. Checked by inserting a
+  segment: it starts at 0 px with the intro on and at its full width without.
+
+### Verification
+
+- `npm run check`: 0 errors. `npm test`: 21 passed. Taste lint: 0 FAIL, 12 WARN.
+- Inspector: 0 FAIL. One run caught the cold local Worker mid-load and added a
+  "no data hue" WARN because the Senate was still on its skeleton; the other runs had
+  the usual single paper-tone WARN.
+- Browser: skeleton at 1440 light and 375 dark with `?hold`, then the reveal; no
+  Svelte errors. The pane only renders frames on screenshots, so the sequence was
+  checked at its start and end states, not watched frame by frame.

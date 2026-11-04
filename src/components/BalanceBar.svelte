@@ -23,7 +23,8 @@
       { key: "r-lead", n: t.leading.R, cls: "lead r", label: "Republicans leading" },
       { key: "r-won", n: t.called.R, cls: "won r", label: "Republicans won tonight" },
       { key: "r-hold", n: t.holdover.R, cls: "hold r", label: "Republicans not up this year" },
-    ].filter((s) => s.n > 0);
+      // "open" stays even at zero: it grows to fill the gap, so on first load each party grows from its own edge.
+    ].filter((s) => s.n > 0 || s.key === "open");
   });
 
   const side = (p: Party) => (t ? { have: secured(t, p), lead: t.leading[p], need: Math.max(0, t.majority - secured(t, p)) } : null);
@@ -38,11 +39,19 @@
   let lastChamber: Chamber | null = null;
   $effect(() => {
     if (!d || !r) return;
-    const instant = chamber !== lastChamber || prefersReducedMotion.current;
+    // First numbers of the visit count up from zero, a little slower; that happens once.
+    const first = lastChamber === null;
+    const instant = (!first && chamber !== lastChamber) || prefersReducedMotion.current;
     lastChamber = chamber;
-    const opts = instant ? { duration: 0 } : undefined;
+    const opts = instant ? { duration: 0 } : first ? { duration: 900 } : undefined;
     dShown.set(d.have, opts);
     rShown.set(r.have, opts);
+  });
+
+  // The bar grows in from both edges once, when the first data lands; later chamber switches stay instant.
+  let intro = $state(true);
+  $effect(() => {
+    if (t && intro) setTimeout(() => (intro = false), 1200);
   });
 </script>
 
@@ -51,9 +60,9 @@
   <div class="figures">
     <div class="side">
       <span class="who"><span class="chip d" aria-hidden="true"></span>{partyName.D}</span>
-      <span class="big num" class:loading={!d}>{d ? Math.round(dShown.current) : ""}</span>
+      <span class="big num" class:sk={!d}>{d ? Math.round(dShown.current) : ""}</span>
       <span class="sub">
-        {#if d}<span>{d.need > 0 ? `${d.need} short of ${meta.majority}` : "Control won"}</span>{#if d.lead > 0}<span>+{d.lead} leading</span>{/if}{/if}
+        {#if d}<span>{d.need > 0 ? `${d.need} short of ${meta.majority}` : "Control won"}</span>{#if d.lead > 0}<span>+{d.lead} leading</span>{/if}{:else}<span class="sk sub-sk"></span>{/if}
       </span>
     </div>
     <div class="mid">
@@ -62,27 +71,28 @@
     </div>
     <div class="side right">
       <span class="who">{partyName.R}<span class="chip r" aria-hidden="true"></span></span>
-      <span class="big num" class:loading={!r}>{r ? Math.round(rShown.current) : ""}</span>
+      <span class="big num" class:sk={!r}>{r ? Math.round(rShown.current) : ""}</span>
       <span class="sub">
-        {#if r}<span>{r.need > 0 ? `${r.need} short of ${meta.majority}` : "Control won"}</span>{#if r.lead > 0}<span>+{r.lead} leading</span>{/if}{/if}
+        {#if r}<span>{r.need > 0 ? `${r.need} short of ${meta.majority}` : "Control won"}</span>{#if r.lead > 0}<span>+{r.lead} leading</span>{/if}{:else}<span class="sk sub-sk"></span>{/if}
       </span>
     </div>
   </div>
 
-  <div class="bar" role="img" aria-label={t ? `${partyName.D} ${d?.have}, ${partyName.R} ${r?.have}${o ? `, others ${o}` : ""}, ${t.uncalled} not called, of ${t.total} ${meta.unit}` : "Loading"}>
+  <div class="bar" class:sk={!t} class:intro role="img" aria-label={t ? `${partyName.D} ${d?.have}, ${partyName.R} ${r?.have}${o ? `, others ${o}` : ""}, ${t.uncalled} not called, of ${t.total} ${meta.unit}` : "Loading"}>
     {#key chamber}
       {#each segments as s (s.key)}
-        <span class="seg {s.cls}" style:flex-basis={pct(s.n)} title="{s.label}: {s.n}"></span>
+        <span class="seg {s.cls}" style:--w={pct(s.n)} title="{s.label}: {s.n}"></span>
       {/each}
     {/key}
     <span class="line" style:left={pct(meta.majority - 0.5)} aria-hidden="true"></span>
   </div>
 
   <ul class="key" aria-label="Key">
-    {#if t && t.holdover.D + t.holdover.R + t.holdover.O > 0}<li><span class="sw hold"><i class="d"></i><i class="r"></i></span>Not up this year</li>{/if}
+    {#if t ? t.holdover.D + t.holdover.R + t.holdover.O > 0 : chamber !== "house"}<li><span class="sw hold"><i class="d"></i><i class="r"></i></span>Not up this year</li>{/if}
     <li><span class="sw won"><i class="d"></i><i class="r"></i></span>Won tonight</li>
     <li><span class="sw lead"><i class="d"></i><i class="r"></i></span>Leading, not called</li>
     <li><span class="sw open"></span>Not called</li>
+    {#if !t}<li class="count"><span class="sk key-sk"></span></li>{/if}
     {#if t}<li class="count num">{t.total - t.uncalled - t.holdover.D - t.holdover.R - t.holdover.O} of {t.total - t.holdover.D - t.holdover.R - t.holdover.O} races called</li>{/if}
   </ul>
 </section>
@@ -97,14 +107,17 @@
   .chip.d { background: var(--dem); }
   .chip.r { background: var(--rep); }
   .big { font-size: 36px; line-height: 1.05; font-weight: 600; letter-spacing: -0.02em; min-height: 38px; }
-  .big.loading { width: 56px; background: var(--skeleton); border-radius: 4px; }
+  .big.sk { width: 56px; height: 34px; min-height: 0; margin: 2px 0; }
+  .sub-sk { width: 84px; height: 10px; margin-top: 5px; }
+  .key-sk { width: 96px; height: 10px; }
   /* Two lines reserved so a "+N leading" line arriving mid-night never shifts the figures. */
   .sub { display: grid; align-content: start; min-height: 2lh; font-size: 13px; color: var(--muted); }
   .mid { display: grid; justify-items: center; text-align: center; gap: 2px; padding-bottom: 2px; }
   .target { font-size: 20px; font-weight: 600; }
 
   .bar { position: relative; display: flex; height: 28px; border-radius: 4px; overflow: hidden; background: var(--map-waiting); }
-  .seg { flex-grow: 0; flex-shrink: 0; transition: flex-basis var(--dur-data) var(--ease-in-out); }
+  /* Widths come in as a variable: an inline flex-basis would outrank @starting-style and skip the grow-in. */
+  .seg { flex-grow: 0; flex-shrink: 0; flex-basis: var(--w); transition: flex-basis var(--dur-data) var(--ease-in-out); }
   .seg + .seg { box-shadow: inset 1px 0 0 var(--surface); }
   .seg.d.won { background: var(--dem); }
   .seg.r.won { background: var(--rep); }
@@ -113,7 +126,9 @@
   .seg.r.hold { background: var(--rep-hold); }
   .seg.d.lead { background: var(--dem-lead); }
   .seg.r.lead { background: var(--rep-lead); }
-  .seg.open { background: var(--map-waiting); }
+  .seg.open { flex-grow: 1; background: var(--map-waiting); }
+  .intro .seg { transition-duration: 900ms; transition-timing-function: var(--ease-out); }
+  .intro .seg:not(.open) { @starting-style { flex-basis: 0; } }
   .line { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; background: var(--ink); }
 
   .key { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--muted); }

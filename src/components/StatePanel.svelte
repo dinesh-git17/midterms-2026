@@ -65,7 +65,7 @@
         <span class="pill" class:called={r.status === "called"} class:runoff={r.status === "runoff"}>{statusText(r)}</span>
         <span class="num reporting">{fmt.reporting(r.reporting)} of expected votes in</span>
       </div>
-      <div class="meter" aria-hidden="true"><span style:transform="scaleX({Math.min(100, r.reporting) / 100})"></span></div>
+      <div class="meter" aria-hidden="true"><span style:--x={Math.min(100, r.reporting) / 100}></span></div>
       {@render candidates(r)}
       {#if r.totalVotes > 0}<p class="total num">{fmt.votes(r.totalVotes)} votes counted</p>{/if}
     {/each}
@@ -87,7 +87,7 @@
               {#if c.winner}<svg class="check" viewBox="0 0 16 16" width="14" height="14" aria-label="Winner"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>{/if}
             </span>
             <span class="party">{c.partyName}{c.incumbent ? " · Incumbent" : ""}</span>
-            <span class="share" aria-hidden="true"><span style:transform="scaleX({c.percent / 100})" style:background={partyVar[c.party]}></span></span>
+            <span class="share" aria-hidden="true"><span style:--x={c.percent / 100} style:background={partyVar[c.party]}></span></span>
           </th>
           <td class="num">{fmt.votes(c.votes)}</td>
           <td class="num pct">{r.totalVotes ? fmt.pct(c.percent) : "-"}</td>
@@ -114,7 +114,8 @@
   .reporting { font-size: 13px; color: var(--muted); }
   .meter { height: 4px; border-radius: 2px; background: var(--raised); overflow: hidden; margin-top: -8px; }
   /* Bars grow from their axis when the panel opens, then glide as counts come in. */
-  .meter span, .share span { display: block; height: 100%; transform-origin: left; transition: transform var(--dur-data) var(--ease-in-out); }
+  /* Scale comes in as --x so @starting-style (scaleX(0)) can win on open; an inline transform would outrank it. */
+  .meter span, .share span { display: block; height: 100%; transform: scaleX(var(--x)); transform-origin: left; transition: transform var(--dur-data) var(--ease-in-out); }
   .meter span { background: var(--ink); }
   @starting-style { .meter span, .share span { transform: scaleX(0); } }
 

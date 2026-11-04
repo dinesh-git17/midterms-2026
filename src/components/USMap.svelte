@@ -39,6 +39,12 @@
   const nudge: Record<string, [number, number]> = { fl: [10, -4], mi: [8, 14], la: [-8, 0], ky: [6, 2], ca: [-6, 0], id: [0, 12] };
   const labelled = shapes.filter((s) => s.area > 1400);
 
+  // First data of the visit: states take their colours in a quick west-to-east sweep, once.
+  let intro = $state(true);
+  $effect(() => {
+    if (results && intro) setTimeout(() => (intro = false), 1400);
+  });
+
   let hover = $state<{ code: string; x: number; y: number } | null>(null);
   const hovered = $derived(hover ? results?.get(hover.code) : undefined);
   const byCode = new Map(shapes.map((s) => [s.code, s]));
@@ -65,7 +71,7 @@
 </script>
 
 <div class="map" role="group" aria-label="Map of results by state">
-  <svg viewBox="0 0 975 610" aria-hidden="false">
+  <svg viewBox="0 0 975 610" aria-hidden="false" class:sk={!results} class:intro aria-busy={!results}>
     <defs>
       <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
         <rect width="6" height="6" fill="var(--map-waiting)" />
@@ -80,9 +86,10 @@
       <path
         d={s.d}
         class="state"
-        class:none={!r}
+        class:none={results && !r}
         class:active={selected === s.code}
-        style:fill={fillFor(r)}
+        style:fill={results ? fillFor(r) : "var(--skeleton)"}
+        style:--d="{Math.round((s.x / 975) * 420)}ms"
         role={r ? "button" : "img"}
         tabindex={r ? 0 : undefined}
         aria-label={label(s.code)}
@@ -100,7 +107,7 @@
     {#each shapes.filter((s) => s.code === selected) as s (s.code)}
       <path d={s.d} class="outline" />
     {/each}
-    {#each labelled as s (s.code)}
+    {#each results ? labelled : [] as s (s.code)}
       {@const [dx, dy] = nudge[s.code] ?? [0, 0]}
       <text x={s.x + dx} y={s.y + dy} class="abbr {ink(results?.get(s.code))}" aria-hidden="true">{s.code.toUpperCase()}</text>
     {/each}
@@ -117,6 +124,11 @@
 <style>
   .map { position: relative; }
   svg { display: block; width: 100%; height: auto; overflow: visible; }
+  /* The global .sk would paint a block behind the map; here only its pulse is wanted. */
+  svg.sk { background: none; }
+  .intro .state { transition-delay: var(--d); }
+  .abbr { animation: fade-in 400ms ease backwards; animation-delay: 300ms; }
+  @keyframes fade-in { from { opacity: 0; } }
   .state {
     stroke: var(--map-stroke);
     stroke-width: 0.9;
@@ -167,5 +179,6 @@
   @keyframes tip-in { from { opacity: 0; transform: translate(12px, -50%) scale(0.97); } }
   @media (prefers-reduced-motion: reduce) {
     .tip { animation: none; }
+    .intro .state { transition-delay: 0ms; }
   }
 </style>

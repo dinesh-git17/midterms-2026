@@ -4,7 +4,12 @@
   import { raceLine } from "../lib/describe";
   import type { CalledItem } from "../lib/live.svelte";
 
-  let { items, calledSoFar, onselect }: { items: CalledItem[]; calledSoFar: number; onselect: (i: CalledItem) => void } = $props();
+  let {
+    items,
+    calledSoFar,
+    loading = false,
+    onselect,
+  }: { items: CalledItem[]; calledSoFar: number; loading?: boolean; onselect: (i: CalledItem) => void } = $props();
 
   // Calls from the same poll share a timestamp; stagger within that group only, so older rows never replay.
   const stagger = (i: number) => {
@@ -18,7 +23,9 @@
 
 <section aria-labelledby="feed-title">
   <h2 id="feed-title">Called since you opened this page</h2>
-  {#if items.length === 0}
+  {#if loading}
+    <span class="sk empty-sk" aria-hidden="true"></span>
+  {:else if items.length === 0}
     <p class="empty">None yet. {calledSoFar === 0 ? "No races have been called tonight." : `${calledSoFar} ${calledSoFar === 1 ? "race was" : "races were"} called before you arrived; they are on the map.`}</p>
   {:else}
     <ul aria-live="polite">
@@ -52,6 +59,7 @@
   .time { font-size: 12px; color: var(--muted); }
   .line { grid-column: 2 / 4; font-size: 13px; color: var(--muted); }
   .empty { margin: 0; font-size: 13px; color: var(--muted); }
+  .empty-sk { width: 70%; height: 10px; margin: 6px 0 4px; }
   @keyframes arrive { from { opacity: 0; transform: translateY(-6px); } }
   @keyframes tint { from { background: color-mix(in oklab, var(--tint) 16%, transparent); } }
   @media (prefers-reduced-motion: reduce) { li { animation: tint 2400ms ease-out backwards; } }
