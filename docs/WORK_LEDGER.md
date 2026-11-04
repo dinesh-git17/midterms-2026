@@ -179,3 +179,13 @@
   Senate sat on its skeleton meanwhile. The Worker waits on civicAPI before it falls
   back to its stale copy. Serving stale at once and refreshing in the background
   (stale-while-revalidate) would remove that wait. Not done yet.
+
+## 2026-11-03: public repo
+
+- Din asked: "push everything and make a public github repo for it".
+- Before publishing: scanned the full history for keys, tokens and account IDs (none;
+  `wrangler.jsonc` carries no account ID, `.dev.vars*` and `.env*` are ignored). Added
+  a README.
+- Repo: https://github.com/dinesh-git17/midterms-2026 (public, `main`, homepage set to
+  the live site). No licence file yet, so the code is all rights reserved by default.
+- Pushing stays on request only.
