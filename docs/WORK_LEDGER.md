@@ -168,3 +168,14 @@
 - Browser: skeleton at 1440 light and 375 dark with `?hold`, then the reveal; no
   Svelte errors. The pane only renders frames on screenshots, so the sequence was
   checked at its start and end states, not watched frame by frame.
+
+### Deploy
+
+- Deployed with Din's OK, version dfe129c9-295b-4f1d-b772-e82cf7282b22 (commit 7e514a6
+  plus this note). Live checks: page 200, `og.jpg` 200 (377 KB JPEG), all three race
+  endpoints 200 under 1 s, dev `__live` hook absent from the bundle, no console errors.
+  Browser: the entrance played and settled on the full page.
+- Seen live: one Senate request took 8 s on a cache miss in this data center, and the
+  Senate sat on its skeleton meanwhile. The Worker waits on civicAPI before it falls
+  back to its stale copy. Serving stale at once and refreshing in the background
+  (stale-while-revalidate) would remove that wait. Not done yet.

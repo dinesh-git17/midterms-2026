@@ -34,5 +34,6 @@ accepted (Din signed off).
 | Called feed dedupe (`each_key_duplicate` when a call is withdrawn and made again) | verified (4 tests) |
 | Poll at most every 30 s when the tab regains focus | verified (3 tests, browser: polls at 0, 31, 61 s) |
 | Load motion and skeleton polish | verified (browser at 375 and 1440, dark and light) |
-| Redeploy with phase 2 work | approved by Din ("then deploy") |
+| Redeploy with phase 2 work | verified live (version dfe129c9) |
+| Worker: serve stale at once, refresh in the background | planned |
 | Worker tests (`trimRace`, retry, stale fallback) | planned |
