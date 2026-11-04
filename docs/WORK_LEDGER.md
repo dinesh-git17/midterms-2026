@@ -187,5 +187,7 @@
   `wrangler.jsonc` carries no account ID, `.dev.vars*` and `.env*` are ignored). Added
   a README.
 - Repo: https://github.com/dinesh-git17/midterms-2026 (public, `main`, homepage set to
-  the live site). No licence file yet, so the code is all rights reserved by default.
+  the live site).
+- Licence: MIT, at Din's request. The README notes that the dins name, wordmark and
+  seal are brand assets outside the licence.
 - Pushing stays on request only.

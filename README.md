@@ -50,3 +50,8 @@ docs/           PRD, plan, tasks and the work ledger
 
 Results from [civicAPI](https://civicapi.org). Unofficial; states certify their own
 counts in the weeks after election day. Made by [dins](https://dins.dev).
+
+## Licence
+
+Code under the [MIT License](LICENSE). The dins name, wordmark and seal are the
+author's brand and are not covered by it; swap them out if you reuse the page.
